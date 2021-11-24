@@ -14,6 +14,11 @@
 */**/*tx_database*
 */**/*dapps*
 build/_vendor/pkg
+.puppeth/
+data.txt
+testnet-harmony.json
+testnet.json
+
 
 #*
 .#*
