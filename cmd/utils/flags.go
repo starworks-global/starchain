@@ -1567,7 +1567,7 @@ func SetEthConfig(ctx *cli.Context, stack *node.Node, cfg *ethconfig.Config) {
 		SetDNSDiscoveryDefaults(cfg, params.MainnetGenesisHash)
 	case ctx.GlobalBool(TestnetFlag.Name):
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
-			cfg.NetworkId = 3
+			cfg.NetworkId = 1579
 		}
 		cfg.Genesis = core.DefaultTestnetGenesisBlock()
 		SetDNSDiscoveryDefaults(cfg, params.TestnetGenesisHash)
