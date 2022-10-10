@@ -1,4 +1,4 @@
-package congress
+package systemcontract
 
 import (
 	"github.com/ethereum/go-ethereum/accounts/abi"

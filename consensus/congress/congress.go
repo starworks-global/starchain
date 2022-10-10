@@ -20,6 +20,8 @@ package congress
 import (
 	"bytes"
 	"errors"
+	"github.com/ethereum/go-ethereum/consensus/congress/systemcontract"
+	"github.com/ethereum/go-ethereum/consensus/congress/vmcaller"
 	"io"
 	"math"
 	"math/big"
@@ -66,16 +68,6 @@ var (
 
 	diffInTurn = big.NewInt(2) // Block difficulty for in-turn signatures
 	diffNoTurn = big.NewInt(1) // Block difficulty for out-of-turn signatures
-)
-
-// System contract address.
-var (
-	validatorsContractName = "validators"
-	punishContractName     = "punish"
-	proposalContractName   = "proposal"
-	validatorsContractAddr = common.HexToAddress("0x000000000000000000000000000000000000f000")
-	punishContractAddr     = common.HexToAddress("0x000000000000000000000000000000000000f001")
-	proposalAddr           = common.HexToAddress("0x000000000000000000000000000000000000f002")
 )
 
 // Various error messages to mark blocks invalid. These should be private to
@@ -216,7 +208,7 @@ func New(chainConfig *params.ChainConfig, db ethdb.Database) *Congress {
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	signatures, _ := lru.NewARC(inmemorySignatures)
 
-	abi := getInteractiveABI()
+	abi := systemcontract.GetInteractiveABI()
 
 	return &Congress{
 		chainConfig: chainConfig,
@@ -616,6 +608,7 @@ func (c *Congress) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header
 	// deposit block reward if any tx exists.
 	if len(txs) > 0 {
 		if err := c.trySendBlockReward(chain, header, state); err != nil {
+			log.Error("Can't send block reward", "error", err)
 			panic(err)
 		}
 	}
@@ -647,16 +640,16 @@ func (c *Congress) trySendBlockReward(chain consensus.ChainHeaderReader, header 
 	state.SetBalance(consensus.FeeRecorder, common.Big0)
 
 	method := "distributeBlockReward"
-	data, err := c.abi[validatorsContractName].Pack(method)
+	data, err := c.abi[systemcontract.ValidatorsContractName].Pack(method)
 	if err != nil {
 		log.Error("Can't pack data for distributeBlockReward", "err", err)
 		return err
 	}
 
 	nonce := state.GetNonce(header.Coinbase)
-	msg := newLegacyMessage(header.Coinbase, &validatorsContractAddr, nonce, fee, math.MaxUint64, new(big.Int), data, true)
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, systemcontract.GetValidatorAddr(header.Number, c.chainConfig), nonce, fee, math.MaxUint64, new(big.Int), data, true)
 
-	if _, err := executeMsg(msg, state, header, newChainContext(chain, c), c.chainConfig); err != nil {
+	if _, err := vmcaller.ExecuteMsg(msg, state, header, newChainContext(chain, c), c.chainConfig); err != nil {
 		return err
 	}
 
@@ -723,11 +716,13 @@ func (c *Congress) initializeSystemContracts(chain consensus.ChainHeaderReader, 
 		addr    common.Address
 		packFun func() ([]byte, error)
 	}{
-		{validatorsContractAddr, func() ([]byte, error) {
-			return c.abi[validatorsContractName].Pack(method, genesisValidators)
+		{systemcontract.ValidatorsContractAddr, func() ([]byte, error) {
+			return c.abi[systemcontract.ValidatorsContractName].Pack(method, genesisValidators)
 		}},
-		{punishContractAddr, func() ([]byte, error) { return c.abi[punishContractName].Pack(method) }},
-		{proposalAddr, func() ([]byte, error) { return c.abi[proposalContractName].Pack(method, genesisValidators) }},
+		{systemcontract.PunishContractAddr, func() ([]byte, error) { return c.abi[systemcontract.PunishContractName].Pack(method) }},
+		{systemcontract.ProposalAddr, func() ([]byte, error) {
+			return c.abi[systemcontract.ProposalContractName].Pack(method, genesisValidators)
+		}},
 	}
 
 	for _, contract := range contracts {
@@ -737,9 +732,9 @@ func (c *Congress) initializeSystemContracts(chain consensus.ChainHeaderReader, 
 		}
 
 		nonce := state.GetNonce(header.Coinbase)
-		msg := newLegacyMessage(header.Coinbase, &contract.addr, nonce, new(big.Int), math.MaxUint64, new(big.Int), data, true)
+		msg := vmcaller.NewLegacyMessage(header.Coinbase, &contract.addr, nonce, new(big.Int), math.MaxUint64, new(big.Int), data, true)
 
-		if _, err := executeMsg(msg, state, header, newChainContext(chain, c), c.chainConfig); err != nil {
+		if _, err := vmcaller.ExecuteMsg(msg, state, header, newChainContext(chain, c), c.chainConfig); err != nil {
 			return err
 		}
 	}
@@ -759,22 +754,22 @@ func (c *Congress) getTopValidators(chain consensus.ChainHeaderReader, header *t
 	}
 
 	method := "getTopValidators"
-	data, err := c.abi[validatorsContractName].Pack(method)
+	data, err := c.abi[systemcontract.ValidatorsContractName].Pack(method)
 	if err != nil {
 		log.Error("Can't pack data for getTopValidators", "error", err)
 		return []common.Address{}, err
 	}
 
-	msg := newLegacyMessage(header.Coinbase, &validatorsContractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, systemcontract.GetValidatorAddr(parent.Number, c.chainConfig), 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
 
 	// use parent
-	result, err := executeMsg(msg, statedb, parent, newChainContext(chain, c), c.chainConfig)
+	result, err := vmcaller.ExecuteMsg(msg, statedb, parent, newChainContext(chain, c), c.chainConfig)
 	if err != nil {
 		return []common.Address{}, err
 	}
 
 	// unpack data
-	ret, err := c.abi[validatorsContractName].Unpack(method, result)
+	ret, err := c.abi[systemcontract.ValidatorsContractName].Unpack(method, result)
 	if err != nil {
 		return []common.Address{}, err
 	}
@@ -792,7 +787,7 @@ func (c *Congress) getTopValidators(chain consensus.ChainHeaderReader, header *t
 func (c *Congress) updateValidators(vals []common.Address, chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
 	// method
 	method := "updateActiveValidatorSet"
-	data, err := c.abi[validatorsContractName].Pack(method, vals, new(big.Int).SetUint64(c.config.Epoch))
+	data, err := c.abi[systemcontract.ValidatorsContractName].Pack(method, vals, new(big.Int).SetUint64(c.config.Epoch))
 	if err != nil {
 		log.Error("Can't pack data for updateActiveValidatorSet", "error", err)
 		return err
@@ -800,8 +795,8 @@ func (c *Congress) updateValidators(vals []common.Address, chain consensus.Chain
 
 	// call contract
 	nonce := state.GetNonce(header.Coinbase)
-	msg := newLegacyMessage(header.Coinbase, &validatorsContractAddr, nonce, new(big.Int), math.MaxUint64, new(big.Int), data, true)
-	if _, err := executeMsg(msg, state, header, newChainContext(chain, c), c.chainConfig); err != nil {
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, systemcontract.GetValidatorAddr(header.Number, c.chainConfig), nonce, new(big.Int), math.MaxUint64, new(big.Int), data, true)
+	if _, err := vmcaller.ExecuteMsg(msg, state, header, newChainContext(chain, c), c.chainConfig); err != nil {
 		log.Error("Can't update validators to contract", "err", err)
 		return err
 	}
@@ -812,7 +807,7 @@ func (c *Congress) updateValidators(vals []common.Address, chain consensus.Chain
 func (c *Congress) punishValidator(val common.Address, chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
 	// method
 	method := "punish"
-	data, err := c.abi[punishContractName].Pack(method, val)
+	data, err := c.abi[systemcontract.PunishContractName].Pack(method, val)
 	if err != nil {
 		log.Error("Can't pack data for punish", "error", err)
 		return err
@@ -820,8 +815,8 @@ func (c *Congress) punishValidator(val common.Address, chain consensus.ChainHead
 
 	// call contract
 	nonce := state.GetNonce(header.Coinbase)
-	msg := newLegacyMessage(header.Coinbase, &punishContractAddr, nonce, new(big.Int), math.MaxUint64, new(big.Int), data, true)
-	if _, err := executeMsg(msg, state, header, newChainContext(chain, c), c.chainConfig); err != nil {
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, systemcontract.GetPunishAddr(header.Number, c.chainConfig), nonce, new(big.Int), math.MaxUint64, new(big.Int), data, true)
+	if _, err := vmcaller.ExecuteMsg(msg, state, header, newChainContext(chain, c), c.chainConfig); err != nil {
 		log.Error("Can't punish validator", "err", err)
 		return err
 	}
@@ -832,7 +827,7 @@ func (c *Congress) punishValidator(val common.Address, chain consensus.ChainHead
 func (c *Congress) decreaseMissedBlocksCounter(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
 	// method
 	method := "decreaseMissedBlocksCounter"
-	data, err := c.abi[punishContractName].Pack(method, new(big.Int).SetUint64(c.config.Epoch))
+	data, err := c.abi[systemcontract.PunishContractName].Pack(method, new(big.Int).SetUint64(c.config.Epoch))
 	if err != nil {
 		log.Error("Can't pack data for decreaseMissedBlocksCounter", "error", err)
 		return err
@@ -840,8 +835,8 @@ func (c *Congress) decreaseMissedBlocksCounter(chain consensus.ChainHeaderReader
 
 	// call contract
 	nonce := state.GetNonce(header.Coinbase)
-	msg := newLegacyMessage(header.Coinbase, &punishContractAddr, nonce, new(big.Int), math.MaxUint64, new(big.Int), data, true)
-	if _, err := executeMsg(msg, state, header, newChainContext(chain, c), c.chainConfig); err != nil {
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, systemcontract.GetPunishAddr(header.Number, c.chainConfig), nonce, new(big.Int), math.MaxUint64, new(big.Int), data, true)
+	if _, err := vmcaller.ExecuteMsg(msg, state, header, newChainContext(chain, c), c.chainConfig); err != nil {
 		log.Error("Can't decrease missed blocks counter for validator", "err", err)
 		return err
 	}
@@ -1014,4 +1009,11 @@ func encodeSigHeader(w io.Writer, header *types.Header) {
 	if err != nil {
 		panic("can't encode: " + err.Error())
 	}
+}
+
+func (c *Congress) PreHandle(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB) error {
+	if c.chainConfig.BlissBlock != nil && c.chainConfig.BlissBlock.Cmp(header.Number) == 0 {
+		return systemcontract.ApplySystemContractUpgrade(systemcontract.SysContractV1, state, header, newChainContext(chain, c), c.chainConfig)
+	}
+	return nil
 }
