@@ -114,6 +114,116 @@ const validatorsInteractiveABI = `
 ]
 `
 
+const validatorsInteractiveABIV1 = `
+[
+	{
+		"inputs": [
+		  {
+			"internalType": "address[]",
+			"name": "vals",
+			"type": "address[]"
+		  },
+		  {
+			"internalType": "uint256[]",
+			"name": "rewards",
+			"type": "uint256[]"
+		  }
+		],
+		"name": "initialize",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "distributeBlockReward",
+		"outputs": [],
+		"stateMutability": "payable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getTopValidators",
+		"outputs": [
+		  {
+			"internalType": "address[]",
+			"name": "",
+			"type": "address[]"
+		  }
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+		  {
+			"internalType": "address[]",
+			"name": "newSet",
+			"type": "address[]"
+		  },
+		  {
+			"internalType": "uint256",
+			"name": "epoch",
+			"type": "uint256"
+		  }
+		],
+		"name": "updateActiveValidatorSet",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "val",
+          "type": "address"
+        }
+      ],
+      "name": "getValidatorInfo",
+      "outputs": [
+        {
+          "internalType": "address payable",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "enum Validators.Status",
+          "name": "",
+          "type": "uint8"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        },
+        {
+          "internalType": "address[]",
+          "name": "",
+          "type": "address[]"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+]
+`
+
 const punishInteractiveABI = `
 [
 	{
@@ -196,7 +306,7 @@ func init() {
 	tmpABI, _ = abi.JSON(strings.NewReader(proposalInteractiveABI))
 	abiMap[ProposalContractName] = tmpABI
 
-	tmpABI, _ = abi.JSON(strings.NewReader(validatorsInteractiveABI))
+	tmpABI, _ = abi.JSON(strings.NewReader(validatorsInteractiveABIV1))
 	abiMap[ValidatorsV1ContractName] = tmpABI
 	tmpABI, _ = abi.JSON(strings.NewReader(punishInteractiveABI))
 	abiMap[PunishV1ContractName] = tmpABI

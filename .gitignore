@@ -52,3 +52,5 @@ profile.cov
 .puppeth/
 core/data.txt
 core/make
+/genesis.json
+/data/

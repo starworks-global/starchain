@@ -86,3 +86,29 @@ func (v *ValidatorV0) GetValidatorFeeAddr(val common.Address, statedb *state.Sta
 	}
 	return feeAddr, nil
 }
+
+func (v *ValidatorV0) GetValidatorIncoming(val common.Address, statedb *state.StateDB, header *types.Header, chainContext core.ChainContext, config *params.ChainConfig) (*big.Int, error) {
+	method := "getValidatorInfo"
+	data, err := v.abi.Pack(method, val)
+	if err != nil {
+		log.Error("Can't pack data for GetValidatorInfo", "error", err)
+		return common.Big0, err
+	}
+	msg := vmcaller.NewLegacyMessage(header.Coinbase, &v.contractAddr, 0, new(big.Int), math.MaxUint64, new(big.Int), data, false)
+
+	// use parent
+	result, err := vmcaller.ExecuteMsg(msg, statedb, header, chainContext, config)
+	if err != nil {
+		return common.Big0, err
+	}
+	// unpack data
+	ret, err := v.abi.Unpack(method, result)
+	if err != nil {
+		return common.Big0, err
+	}
+	incoming, ok := ret[3].(*big.Int)
+	if !ok {
+		return common.Big0, errors.New("invalid output")
+	}
+	return incoming, nil
+}
