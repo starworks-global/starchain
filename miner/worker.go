@@ -949,12 +949,12 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 	}
 	// Create the current work task and check any fork transitions needed
 	env := w.current
-	//if w.isPoSA {
-	//	if err := w.posa.PreHandle(w.chain, header, env.state); err != nil {
-	//		log.Error("Failed to apply system contract upgrade", "err", err)
-	//		return
-	//	}
-	//}
+	if w.isPoSA {
+		if err := w.posa.PreHandle(w.chain, header, env.state); err != nil {
+			log.Error("Failed to apply system contract upgrade", "err", err)
+			return
+		}
+	}
 	if w.chainConfig.DAOForkSupport && w.chainConfig.DAOForkBlock != nil && w.chainConfig.DAOForkBlock.Cmp(header.Number) == 0 {
 		misc.ApplyDAOHardFork(env.state)
 	}
