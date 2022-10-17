@@ -55,7 +55,7 @@ var (
 		MuirGlacierBlock:    big.NewInt(0),
 		BerlinBlock:         big.NewInt(0),
 		LondonBlock:         nil,
-		BlissBlock:          big.NewInt(572000),
+		BlissBlock:          big.NewInt(2550000),
 
 		Congress: &CongressConfig{
 			Period: 3,
