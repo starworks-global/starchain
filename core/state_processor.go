@@ -73,6 +73,12 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	blockContext := NewEVMBlockContext(header, p.bc, nil)
 	vmenv := vm.NewEVM(blockContext, vm.TxContext{}, statedb, p.config, cfg)
 	// Iterate over and process the individual transactions
+	posa, isPoSA := p.engine.(consensus.PoSA)
+	if isPoSA {
+		if err := posa.PreHandle(p.bc, header, statedb); err != nil {
+			return nil, nil, 0, err
+		}
+	}
 	for i, tx := range block.Transactions() {
 		msg, err := tx.AsMessage(types.MakeSigner(p.config, header.Number), header.BaseFee)
 		if err != nil {

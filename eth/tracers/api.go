@@ -69,11 +69,15 @@ type Backend interface {
 	ChainDb() ethdb.Database
 	StateAtBlock(ctx context.Context, block *types.Block, reexec uint64, base *state.StateDB, checkLive bool) (*state.StateDB, error)
 	StateAtTransaction(ctx context.Context, block *types.Block, txIndex int, reexec uint64) (core.Message, vm.BlockContext, *state.StateDB, error)
+	ChainHeaderReader() consensus.ChainHeaderReader
 }
 
 // API is the collection of tracing APIs exposed over the private debugging endpoint.
 type API struct {
 	backend Backend
+
+	isPoSA bool
+	posa   consensus.PoSA
 }
 
 // NewAPI creates a new API definition for the tracing methods of the Ethereum service.
@@ -261,7 +265,11 @@ func (api *API) traceChain(ctx context.Context, start, end *types.Block, config 
 			// Fetch and execute the next block trace tasks
 			for task := range tasks {
 				signer := types.MakeSigner(api.backend.ChainConfig(), task.block.Number())
+				header := task.block.Header()
 				blockCtx := core.NewEVMBlockContext(task.block.Header(), api.chainContext(localctx), nil)
+				if api.isPoSA {
+					_ = api.posa.PreHandle(api.backend.ChainHeaderReader(), header, task.statedb)
+				}
 				// Trace all the transactions contained within
 				for i, tx := range task.block.Transactions() {
 					msg, _ := tx.AsMessage(signer, task.block.BaseFee())
@@ -569,12 +577,17 @@ func (api *API) traceBlock(ctx context.Context, block *types.Block, config *Trac
 
 		pend = new(sync.WaitGroup)
 		jobs = make(chan *txTraceTask, len(txs))
+
+		header = block.Header()
 	)
 	threads := runtime.NumCPU()
 	if threads > len(txs) {
 		threads = len(txs)
 	}
 	blockCtx := core.NewEVMBlockContext(block.Header(), api.chainContext(ctx), nil)
+	if api.isPoSA {
+		_ = api.posa.PreHandle(api.backend.ChainHeaderReader(), header, statedb)
+	}
 	blockHash := block.Hash()
 	for th := 0; th < threads; th++ {
 		pend.Add(1)
@@ -668,7 +681,11 @@ func (api *API) standardTraceBlockToFile(ctx context.Context, block *types.Block
 		chainConfig = api.backend.ChainConfig()
 		vmctx       = core.NewEVMBlockContext(block.Header(), api.chainContext(ctx), nil)
 		canon       = true
+		header      = block.Header()
 	)
+	if api.isPoSA {
+		_ = api.posa.PreHandle(api.backend.ChainHeaderReader(), header, statedb)
+	}
 	// Check if there are any overrides: the caller may wish to enable a future
 	// fork when executing this block. Note, such overrides are only applicable to the
 	// actual specified block, not any preceding blocks that we have to go through

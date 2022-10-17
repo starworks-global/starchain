@@ -67,9 +67,9 @@ func returnHasherToPool(h *hasher) {
 // original node initialized with the computed hash to replace the original one.
 func (h *hasher) hash(n node, force bool) (hashed node, cached node) {
 	// Return the cached hash if it's available
-	if hash, _ := n.cache(); hash != nil {
-		return hash, n
-	}
+	//if hash, _ := n.cache(); hash != nil {
+	//	return hash, n
+	//}
 	// Trie not processed yet, walk the children
 	switch n := n.(type) {
 	case *shortNode:

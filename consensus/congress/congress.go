@@ -192,6 +192,7 @@ type Congress struct {
 
 	abi map[string]abi.ABI // Interactive with system contracts
 
+	chain consensus.ChainHeaderReader
 	// The fields below are for testing only
 	fakeDiff bool // Skip difficulty verifications
 }
@@ -219,6 +220,10 @@ func New(chainConfig *params.ChainConfig, db ethdb.Database) *Congress {
 		proposals:   make(map[common.Address]bool),
 		abi:         abi,
 	}
+}
+
+func (c *Congress) SetChain(chain consensus.ChainHeaderReader) {
+	c.chain = chain
 }
 
 // SetStateFn sets the function to get state.

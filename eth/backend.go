@@ -158,6 +158,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		bloomIndexer:      core.NewBloomIndexer(chainDb, params.BloomBitsBlocks, params.BloomConfirms),
 		p2pServer:         stack.Server(),
 	}
+	eth.posa, eth.isPoSA = eth.engine.(consensus.PoSA)
 
 	bcVersion := rawdb.ReadDatabaseVersion(chainDb)
 	var dbVer = "<nil>"
@@ -207,6 +208,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	// set state fn if consensus engine is congress.
 	if congressEngine, ok := eth.engine.(*congress.Congress); ok {
 		congressEngine.SetStateFn(eth.blockchain.StateAt)
+		congressEngine.SetChain(eth.blockchain)
 	}
 
 	if config.TxPool.Journal != "" {
