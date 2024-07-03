@@ -677,9 +677,11 @@ func (c *Congress) tryPunishValidator(chain consensus.ChainHeaderReader, header 
 			break
 		}
 	}
-	if !signedRecently {
-		if err := c.punishValidator(outTurnValidator, chain, header, state); err != nil {
-			return err
+	if !c.chainConfig.IsCelestia(header.Number) {
+		if !signedRecently {
+			if err := c.punishValidator(outTurnValidator, chain, header, state); err != nil {
+				return err
+			}
 		}
 	}
 
