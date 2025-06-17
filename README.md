@@ -326,6 +326,39 @@ proceedings to the account specified by `--miner.etherbase`. You can further tun
 by changing the default gas limit blocks converge to (`--miner.targetgaslimit`) and the price
 transactions are accepted at (`--miner.gasprice`).
 
+#### Docker Registry Configuration
+
+To push Docker images to `registry.starlabs.web.id`, you need to configure it as an insecure registry due to TLS certificate issues.
+
+**For Docker Desktop users:**
+1. Open Docker Desktop
+2. Click Settings (gear icon)
+3. Go to "Docker Engine" tab
+4. Edit the JSON configuration to add:
+```json
+{
+  "insecure-registries": ["registry.starlabs.web.id"]
+}
+```
+5. Click "Apply & Restart"
+
+**For Docker CLI users (Linux/Server):**
+1. Create or edit `/etc/docker/daemon.json`:
+```json
+{
+  "insecure-registries": ["registry.starlabs.web.id"]
+}
+```
+2. Restart Docker daemon:
+```shell
+sudo systemctl restart docker
+```
+
+After configuration, you can push images using:
+```shell
+docker push registry.starlabs.web.id/your-image:tag
+```
+
 ## Contribution
 
 Thank you for considering to help out with the source code! We welcome contributions
