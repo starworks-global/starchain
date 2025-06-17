@@ -54,3 +54,4 @@ core/data.txt
 core/make
 /genesis.json
 /data/
+.env

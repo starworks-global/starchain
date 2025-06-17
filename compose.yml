@@ -1,0 +1,9 @@
+services:
+  geth:
+    image: ${REGISTRY_URL}/${STARCHAIN_NODE_IMAGE}
+    container_name: "starchain-testnet-node"
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ./data:/usr/starchain/data

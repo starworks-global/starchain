@@ -16,7 +16,7 @@ archives are published at https://geth.ethereum.org/downloads/.
 
 For prerequisites and detailed build instructions please read the [Installation Instructions](https://geth.ethereum.org/docs/install-and-build/installing-geth).
 
-Building `geth` requires both a Go (version 1.14 or later) and a C compiler. You can install
+Building `geth` requires both a Go (maximum version is 1.19.13) and a C compiler. You can install
 them using your favourite package manager. Once the dependencies are installed, run
 
 ```shell
@@ -325,6 +325,39 @@ Which will start mining blocks and transactions on a single CPU thread, creditin
 proceedings to the account specified by `--miner.etherbase`. You can further tune the mining
 by changing the default gas limit blocks converge to (`--miner.targetgaslimit`) and the price
 transactions are accepted at (`--miner.gasprice`).
+
+#### Docker Registry Configuration
+
+To push Docker images to `registry.starlabs.web.id`, you need to configure it as an insecure registry due to TLS certificate issues.
+
+**For Docker Desktop users:**
+1. Open Docker Desktop
+2. Click Settings (gear icon)
+3. Go to "Docker Engine" tab
+4. Edit the JSON configuration to add:
+```json
+{
+  "insecure-registries": ["registry.starlabs.web.id"]
+}
+```
+5. Click "Apply & Restart"
+
+**For Docker CLI users (Linux/Server):**
+1. Create or edit `/etc/docker/daemon.json`:
+```json
+{
+  "insecure-registries": ["registry.starlabs.web.id"]
+}
+```
+2. Restart Docker daemon:
+```shell
+sudo systemctl restart docker
+```
+
+After configuration, you can push images using:
+```shell
+docker push registry.starlabs.web.id/your-image:tag
+```
 
 ## Contribution
 
