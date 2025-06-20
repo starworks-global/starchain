@@ -8,10 +8,10 @@ FROM golang:1.19 AS runner
 WORKDIR /usr/starchain
 
 COPY --from=builder /usr/starchain/build/bin/geth /usr/local/bin
-COPY testnet.entrypoint.sh /usr/starchain/
+COPY mainnet.entrypoint.sh /usr/starchain/
 
-RUN chmod +x testnet.entrypoint.sh
+RUN chmod +x mainnet.entrypoint.sh
 
 ENV BOOTNODES=""
 
-CMD [ "sh", "-c", "./testnet.entrypoint.sh" ]
+CMD [ "sh", "-c", "./mainnet.entrypoint.sh" ]
