@@ -11,6 +11,7 @@ geth \
   --http.api personal,eth,net,web3,txpool,debug,congress,trace \
   --http.corsdomain "*" \
   --http.addr 0.0.0.0 \
+  --http.vhosts "*" \
   --ws \
   --ws.port 3334 \
   --ws.api eth,net,web3 \
