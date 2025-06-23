@@ -2,8 +2,8 @@ echo "Bootnodes: $BOOTNODES";
 
 geth \
   --datadir /usr/starchain/data \
-  --networkid 1570 \
-  --testnet \
+  --networkid 1578 \
+  --mainnet \
   --port 30303 \
   --syncmode snap \
   --cache 2048 \
